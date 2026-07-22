@@ -1,3 +1,5 @@
+name: Lineaje Image Scan
+
 on:
   workflow_dispatch:
     inputs:
