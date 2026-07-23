@@ -60,6 +60,6 @@ jobs:
           metafiles: Dockerfile
           lineaje_cli_token: ${{ secrets.LINEAJE_CLI_TOKEN }}
           project_name: "acme-base-image"
-          project_version: "v1-patched"
+          project_version: ${{ github.event.inputs.version }} + "-patched"
           org_name: "Root Organization"
           post_scan: scan_only
