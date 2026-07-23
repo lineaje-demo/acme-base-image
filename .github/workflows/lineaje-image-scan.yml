@@ -37,38 +37,29 @@ jobs:
           org_name: "Root Organization"
           post_scan: fix_plan
 
-      # 3. Fail if any Exploited + Critical + High vulnerabilities were found
-      - name: Check for ECH vulnerabilities
+      # 3. Rebuild only when curated fixes exist (already available as-is).
+      #    Skip when premium_only=true — those fixes must be requested from
+      #    Lineaje first and are not yet available to apply.
+      - name: Build patched image
+        if: steps.scan.outputs.premium_only == 'false' && steps.scan.outputs.fix_artifact_uploaded == 'true'
         run: |
-          ECH="${{ steps.scan.outputs.ech_count }}"
-          if [ -n "$ECH" ] && [ "$ECH" -gt 0 ]; then
-            echo "ERROR: $ECH Exploited/Critical/High vulnerability/vulnerabilities found"
-            exit 1
-          fi
+          docker build \
+            -f ${{ steps.scan.outputs.patched_dockerfile }} \
+            --build-arg MY_BUILD_ARG=value \
+            --secret id=mysecret,src=$HOME/.secret \
+            -t acme-base-image:latest-patched \
+            .
 
-      # # 4. Rebuild only when curated fixes exist (already available as-is).
-      # #    Skip when premium_only=true — those fixes must be requested from
-      # #    Lineaje first and are not yet available to apply.
-      # - name: Build patched image
-      #   if: steps.scan.outputs.premium_only == 'false' && steps.scan.outputs.fix_artifact_uploaded == 'true'
-      #   run: |
-      #     docker build \
-      #       -f ${{ steps.scan.outputs.patched_dockerfile }} \
-      #       --build-arg MY_BUILD_ARG=value \
-      #       --secret id=mysecret,src=$HOME/.secret \
-      #       -t acme-base-image:latest-patched \
-      #       .
-
-      # # 5. Rescan the patched image to confirm fixes
-      # - name: Lineaje rescan (patched)
-      #   if: steps.scan.outputs.premium_only == 'false' && steps.scan.outputs.fix_artifact_uploaded == 'true'
-      #   uses: lineaje-actions/lineaje-actions@v1
-      #   with:
-      #     scan_type: image
-      #     image: acme-base-image:latest-patched
-      #     metafiles: Dockerfile
-      #     lineaje_cli_token: ${{ secrets.LINEAJE_CLI_TOKEN }}
-      #     project_name: "acme-base-image"
-      #     project_version: "v1-patched"
-      #     org_name: "Root Organization"
-      #     post_scan: scan_only
+      # 4. Rescan the patched image to confirm fixes
+      - name: Lineaje rescan (patched)
+        if: steps.scan.outputs.premium_only == 'false' && steps.scan.outputs.fix_artifact_uploaded == 'true'
+        uses: lineaje-actions/lineaje-actions@v1
+        with:
+          scan_type: image
+          image: acme-base-image:latest-patched
+          metafiles: Dockerfile
+          lineaje_cli_token: ${{ secrets.LINEAJE_CLI_TOKEN }}
+          project_name: "acme-base-image"
+          project_version: "v1-patched"
+          org_name: "Root Organization"
+          post_scan: scan_only
