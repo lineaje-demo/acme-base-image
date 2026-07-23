@@ -45,8 +45,6 @@ jobs:
         run: |
           docker build \
             -f ${{ steps.scan.outputs.patched_dockerfile }} \
-            --build-arg MY_BUILD_ARG=value \
-            --secret id=mysecret,src=$HOME/.secret \
             -t acme-base-image:latest-patched \
             .
 
